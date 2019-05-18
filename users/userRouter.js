@@ -1,16 +1,40 @@
-const express = "express";
+const express = require("express");
 
 const userDb = require("./userDb.js");
+const postsDb = require("../");
 
 const router = express.Router();
 
-router.post("/", validateUser, (req, res) => {
+const validateIdUser = [validateUserId, validateUser];
+const validateIdPost = [validateUserId, validatePost];
+
+//Post - Works /api/users/
+router.post("/", validateUser, async (req, res) => {
   try {
-  } catch (err) {}
+    //Set user to data
+    const user = await userDb.insert(req.body);
+    res.status(201).json(user);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      message: "Error adding user"
+    });
+  }
 });
 
-router.post("/:id/posts", (req, res) => {});
+// router.post("/:id/posts", validateIdPost, (req, res) => {
+//   try {
 
+//   } catch(err) {
+//     console.log(err);
+//     res.status(500).json({
+//       message: "Error adding user"
+//     });
+//   }
+
+// });
+
+//Works /api/users
 router.get("/", async (req, res) => {
   try {
     const users = await userDb.get();
@@ -20,13 +44,68 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/:id", validateUserId, (req, res) => {});
+//Works /api/users/id
+router.get("/:id", validateUserId, async (req, res) => {
+  // try {
+  //   const user = await userDb.getById(req.params.id);
+  //   res.status(200).json(user);
+  // } catch (err) {
+  //   res.status(500).json({ message: "Error retrieving the user" });
+  // }
 
-router.get("/:id/posts", validateUserId, (req, res) => {});
+  //Since I pulled the user data form validateUserId middleware
+  res.status(200).json(req.user);
+});
 
-router.delete("/:id", validateUserId, (req, res) => {});
+//  /api/users/id/posts
+// router.get("/:id/posts", validateUserId, (req, res) => {
+//   try {
 
-router.put("/:id", (req, res) => {});
+//   } catch(err) {
+//     console.log(err);
+//     res.status(500).json({
+//       message: "Error adding user"
+//     });
+//   }
+// });
+
+//words /api/users/id
+router.delete("/:id", validateUserId, async (req, res) => {
+  try {
+    const deletedUser = await userDb.remove(req.params.id);
+    if (deletedUser > 0) {
+      res.status(200).json(deletedUser);
+    } else {
+      res.status(404).json({ message: "The user could not be found" });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      message: "Error deleting user"
+    });
+  }
+});
+
+router.put("/:id", validateIdUser, async (req, res) => {
+  try {
+    const updateUser = await userDb.update(req.params.id, req.body);
+    const updated = await userDb.getById(req.params.id);
+    if (updateUser) {
+      res.status(200).json({
+        message: `This user has been updated from ${req.user.name} to ${
+          updated.name
+        }`
+      });
+    } else {
+      res.status(404).json({ meesage: "The user could not be found" });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      message: "Error updating user"
+    });
+  }
+});
 
 //custom middleware
 
@@ -39,7 +118,7 @@ async function validateUserId(req, res, next) {
       req.user = user;
       next();
     } else {
-      res.status(400).json({ message: "missing required name field" });
+      res.status(400).json({ message: "missing or not valid id" });
     }
   } catch (err) {
     next();
@@ -48,9 +127,7 @@ async function validateUserId(req, res, next) {
 
 function validateUser(req, res, next) {
   const body = req.body;
-  if (!body) {
-    res.status(400).json({ message: "missing user data" });
-  } else if (!body.name) {
+  if (!body.name) {
     res.status(400).json({ message: "missing required name field" });
   } else {
     next();
@@ -59,9 +136,7 @@ function validateUser(req, res, next) {
 
 function validatePost(req, res, next) {
   const body = req.body;
-  if (!body) {
-    res.status(400).json({ message: "missing post data" });
-  } else if (!body.text) {
+  if (!body.text) {
     res.status(400).json({ message: "missing required text field" });
   } else {
     next();
