@@ -1,7 +1,7 @@
 const express = require("express");
 
 const userDb = require("./userDb.js");
-const postsDb = require("../");
+const postDb = require("../posts/postDb.js");
 
 const router = express.Router();
 
@@ -22,17 +22,19 @@ router.post("/", validateUser, async (req, res) => {
   }
 });
 
-// router.post("/:id/posts", validateIdPost, (req, res) => {
-//   try {
-
-//   } catch(err) {
-//     console.log(err);
-//     res.status(500).json({
-//       message: "Error adding user"
-//     });
-//   }
-
-// });
+// /api/users/id/post
+router.post("/:id/posts", validateIdPost, async (req, res) => {
+  const postInfo = { ...req.body, user_id: req.params.id };
+  try {
+    const post = await postDb.insert(postInfo);
+    res.status(201).json(post);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      message: "Error adding user post"
+    });
+  }
+});
 
 //Works /api/users
 router.get("/", async (req, res) => {
@@ -58,16 +60,17 @@ router.get("/:id", validateUserId, async (req, res) => {
 });
 
 //  /api/users/id/posts
-// router.get("/:id/posts", validateUserId, (req, res) => {
-//   try {
-
-//   } catch(err) {
-//     console.log(err);
-//     res.status(500).json({
-//       message: "Error adding user"
-//     });
-//   }
-// });
+router.get("/:id/posts", validateUserId, async (req, res) => {
+  try {
+    const posts = await userDb.getUserPosts(req.params.id);
+    res.status(200).json(posts);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      message: "Error adding user"
+    });
+  }
+});
 
 //words /api/users/id
 router.delete("/:id", validateUserId, async (req, res) => {
@@ -88,6 +91,7 @@ router.delete("/:id", validateUserId, async (req, res) => {
 
 router.put("/:id", validateIdUser, async (req, res) => {
   try {
+    //Grab and save updated users info
     const updateUser = await userDb.update(req.params.id, req.body);
     const updated = await userDb.getById(req.params.id);
     if (updateUser) {
